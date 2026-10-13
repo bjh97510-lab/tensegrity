@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>텐세그리티 탐구</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: one sticky step bar, one centered column (max 900px), one view visible at a time. */
+:root{
+  --bg:#eef3f9;          /* cool off-white, blue bias */
+  --surface:#ffffff;
+  --surface-2:#f6f9fd;
+  --fg:#15223a;
+  --muted:#5a6a84;
+  --line:#d5dfec;
+  --tension:#e8553a;     /* 장력: 줄 (coral red) */
+  --tension-soft:#ffe5de;
+  --comp:#1f6fb2;        /* 압축력: 막대 (steel blue) */
+  --comp-soft:#dcebfa;
+  --ok:#1b8f5a; --ok-soft:#dcf5e8;
+  --bad:#c93c3c; --bad-soft:#fde3e3;
+  --gold:#c89a2b; --gold-soft:#fbf1d6;
+  --cert-paper:#fffdf6;
+  --shadow:0 10px 30px rgba(21,34,58,.08);
+  --font-display:'Jua','Noto Sans KR',system-ui,sans-serif;
+  --font-body:'Noto Sans KR',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --radius:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1626; --surface:#182238; --surface-2:#1f2b45; --fg:#e9eef8; --muted:#a2b1c9; --line:#2d3c58;
+    --tension:#ff7b61; --tension-soft:#4a2a24; --comp:#5aa2e6; --comp-soft:#1d3552;
+    --ok:#4fcf8f; --ok-soft:#163a2b; --bad:#ff7a7a; --bad-soft:#4a2020;
+    --gold:#e2b94f; --gold-soft:#3d3217; --cert-paper:#fffdf6;
+    --shadow:0 10px 30px rgba(0,0,0,.35); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1626; --surface:#182238; --surface-2:#1f2b45; --fg:#e9eef8; --muted:#a2b1c9; --line:#2d3c58;
+  --tension:#ff7b61; --tension-soft:#4a2a24; --comp:#5aa2e6; --comp-soft:#1d3552;
+  --ok:#4fcf8f; --ok-soft:#163a2b; --bad:#ff7a7a; --bad-soft:#4a2020;
+  --gold:#e2b94f; --gold-soft:#3d3217; --cert-paper:#fffdf6;
+  --shadow:0 10px 30px rgba(0,0,0,.35); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--font-display);font-weight:400;line-height:1.25;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(1.9rem,5.5vw,3.1rem)}
+h2{font-size:clamp(1.45rem,3.6vw,2rem)}
+h3{font-size:1.2rem}
+p{margin:0}
+button{font:inherit;cursor:pointer;color:inherit}
+button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--comp);outline-offset:2px}
+.wrap{max-width:900px;margin-inline:auto;padding-inline:16px}
+
+/* step bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top-inner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-size:1.1rem}
+.brand-mark{width:14px;height:14px;border-radius:50%;background:var(--tension);box-shadow:0 0 0 3px var(--tension-soft)}
+.steps{display:flex;gap:4px;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--muted);font-size:.9rem;font-weight:500}
+.step-n{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--line);font-size:.75rem;color:var(--fg);font-variant-numeric:tabular-nums}
+.step.is-active{background:var(--surface-2);border-color:var(--line);color:var(--fg)}
+.step.is-active .step-n{background:var(--comp);color:#fff}
+.step.is-done .step-n{background:var(--ok);color:#fff}
+.step.is-locked{opacity:.6}
+.step .lock{font-size:.8rem}
+.step.shake{animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-4px)}50%{transform:translateX(4px)}75%{transform:translateX(-2px)}}
+
+/* views */
+.view{padding-block:32px 72px;display:flex;flex-direction:column;gap:40px}
+.eyebrow{font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.lead{font-size:1.1rem;color:var(--muted);max-width:60ch}
+.section-head{display:flex;flex-direction:column;gap:8px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.grid>*{min-width:0}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1.1fr 1fr;gap:28px;align-items:center}
+.hero>*{min-width:0}
+@media (max-width:720px){.hero{grid-template-columns:1fr}}
+.hero-text{display:flex;flex-direction:column;gap:16px}
+.hero h1 em{font-style:normal;color:var(--tension)}
+.demo{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow)}
+.demo svg{width:100%;height:auto;max-width:100%;display:block}
+.demo-controls{display:flex;flex-direction:column;gap:6px}
+.demo-controls label{display:flex;justify-content:space-between;font-size:.9rem;font-weight:500}
+.demo-controls input[type=range]{width:100%;accent-color:var(--tension)}
+.readout{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem}
+.readout div{background:var(--surface-2);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+.readout b{font-size:1.05rem;font-variant-numeric:tabular-nums}
+.readout .t{color:var(--tension)} .readout .c{color:var(--comp)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.legend span::before{content:"";display:inline-block;width:18px;height:4px;border-radius:2px;margin-right:6px;vertical-align:middle;background:var(--tension)}
+.legend span.c::before{background:var(--comp);height:8px}
+
+/* goals & concepts */
+.goal{display:flex;gap:14px;align-items:flex-start}
+.goal-n{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--comp-soft);color:var(--comp);font-family:var(--font-display);font-size:1.1rem}
+.goal p{font-weight:500}
+.define{display:grid;grid-template-columns:auto 1fr;gap:16px 20px;align-items:center}
+@media (max-width:560px){.define{grid-template-columns:1fr}}
+.word{display:flex;gap:4px;font-family:var(--font-display);font-size:1.7rem;flex-wrap:wrap}
+.word .a{color:var(--tension)} .word .b{color:var(--comp)}
+.word small{display:block;font-family:var(--font-body);font-size:.75rem;color:var(--muted);letter-spacing:.05em}
+.concept{display:flex;flex-direction:column;gap:10px}
+.concept .tag{align-self:flex-start;font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--surface-2);color:var(--muted);letter-spacing:.04em}
+.concept svg{width:100%;height:auto;max-width:100%}
+.concept p{font-size:.93rem;color:var(--muted)}
+.concept p b{color:var(--fg)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 22px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:700;text-decoration:none;color:inherit;transition:transform .12s,box-shadow .12s}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-primary{background:var(--tension);border-color:var(--tension);color:#fff}
+.btn-blue{background:var(--comp);border-color:var(--comp);color:#fff}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+
+/* quiz */
+.progress{display:flex;align-items:center;gap:12px;font-size:.9rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{flex:1;height:10px;background:var(--line);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--comp),var(--tension));transition:width .4s}
+.q-list{display:flex;flex-direction:column;gap:18px}
+.q{display:flex;flex-direction:column;gap:14px}
+.q-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.q-num{font-family:var(--font-display);font-size:1.3rem;color:var(--comp)}
+.q-tag{font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--comp-soft);color:var(--comp)}
+.q-text{font-size:1.08rem;font-weight:500;line-height:1.6}
+.opts{display:grid;gap:8px}
+.opts.ox{grid-template-columns:1fr 1fr}
+.opt{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;border:2px solid var(--line);background:var(--surface-2);text-align:left;transition:border-color .15s,background .15s}
+.opt:hover:not(:disabled){border-color:var(--comp)}
+.opt:disabled{cursor:default}
+.opt-k{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:1px solid var(--line);font-weight:700;font-size:.85rem}
+.opts.ox .opt{justify-content:center;font-family:var(--font-display);font-size:1.8rem;padding-block:18px}
+.opts.ox .opt-k{display:none}
+.opt.is-correct{border-color:var(--ok);background:var(--ok-soft)}
+.opt.is-correct .opt-k{background:var(--ok);color:#fff;border-color:var(--ok)}
+.opt.is-wrong{border-color:var(--bad);background:var(--bad-soft)}
+.opt.is-wrong .opt-k{background:var(--bad);color:#fff;border-color:var(--bad)}
+.explain{border-radius:12px;padding:14px 16px;font-size:.95rem;display:flex;gap:10px;align-items:flex-start;animation:pop .25s ease-out}
+.explain.ok{background:var(--ok-soft);border:1px solid var(--ok)}
+.explain.bad{background:var(--bad-soft);border:1px solid var(--bad)}
+.explain b{display:block;margin-bottom:2px}
+.explain-slot:empty{display:none}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}}
+.result{display:flex;flex-direction:column;gap:16px;align-items:flex-start;border:2px solid var(--comp);background:var(--comp-soft)}
+.score{font-family:var(--font-display);font-size:2.4rem;color:var(--comp);font-variant-numeric:tabular-nums}
+.score small{font-size:1.1rem;color:var(--fg)}
+
+/* think */
+.prompt{display:flex;flex-direction:column;gap:12px}
+.prompt-q{display:flex;gap:12px;align-items:flex-start;font-size:1.05rem;font-weight:500}
+.prompt-q .mark{flex:none;font-family:var(--font-display);font-size:1.4rem;color:var(--tension)}
+textarea{width:100%;min-height:120px;resize:vertical;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);font:inherit;line-height:1.6}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-size:.8rem;padding:4px 10px;border-radius:999px;border:1px dashed var(--line);background:transparent;color:var(--muted)}
+.chip:hover{border-color:var(--comp);color:var(--comp)}
+.saved{font-size:.8rem;color:var(--muted);min-height:1.2em}
+
+/* certificate */
+.form{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+@media (max-width:620px){.form{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label{font-size:.85rem;font-weight:700;color:var(--muted)}
+.field input{padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);font:inherit;min-width:0}
+.field .fixed{padding:11px 13px;border-radius:10px;border:1px dashed var(--line);color:var(--muted);font-weight:500}
+.cert-open{display:flex;flex-direction:column;gap:28px}
+.cert-wrap{padding:4px}
+.cert{
+  width:100%;max-width:760px;margin-inline:auto;aspect-ratio:1.414/1;
+  background:var(--cert-paper);color:#1d2740;padding:clamp(14px,3vw,34px);
+  border:3px solid #1d3a6b;outline:2px solid #c89a2b;outline-offset:-10px;
+  position:relative;display:flex;flex-direction:column;justify-content:space-between;
+  box-shadow:var(--shadow);container-type:inline-size;font-family:var(--font-body);
+}
+.cert *{min-width:0}
+.cert-head{text-align:center;display:flex;flex-direction:column;gap:1.5cqw}
+.cert-eyebrow{font-size:2cqw;letter-spacing:.3em;color:#1d3a6b;font-weight:700}
+.cert-title{font-family:var(--font-display);font-size:6cqw;color:#1d3a6b;line-height:1.1}
+.cert-sub{font-size:2.2cqw;color:#6b7590;letter-spacing:.08em}
+.cert-body{text-align:center;display:flex;flex-direction:column;gap:2.2cqw;align-items:center}
+.cert-name{font-family:var(--font-display);font-size:6.5cqw;color:#e8553a;border-bottom:2px solid #1d3a6b;padding:0 3cqw .5cqw;min-width:40%;line-height:1.3}
+.cert-text{font-size:2.6cqw;line-height:1.7;max-width:85%}
+.cert-text b{color:#1d3a6b}
+.cert-items{display:flex;gap:1.5cqw;flex-wrap:wrap;justify-content:center;font-size:2cqw;color:#1d3a6b}
+.cert-items span{border:1px solid #c89a2b;border-radius:999px;padding:.3cqw 1.6cqw;background:#fff}
+.cert-foot{display:flex;justify-content:space-between;align-items:flex-end;gap:2cqw}
+.cert-date{font-size:2.4cqw;font-weight:500}
+.cert-org{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:.5cqw}
+.cert-org b{font-size:3cqw;font-family:var(--font-display);font-weight:400;color:#1d3a6b}
+.cert-org span{font-size:2cqw;color:#6b7590}
+.seal{position:absolute;left:50%;bottom:3%;margin-left:-7cqw;width:14cqw;height:14cqw;border-radius:50%;border:3px double #e8553a;color:#e8553a;display:grid;place-items:center;font-family:var(--font-display);font-size:2.6cqw;line-height:1.2;text-align:center;transform:rotate(-12deg);opacity:.85;background:rgba(255,255,255,.4)}
+.cert-actions{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.note{font-size:.85rem;color:var(--muted);max-width:65ch}
+.cert-img{max-width:100%;border-radius:8px;box-shadow:var(--shadow)}
+.locked-msg{display:flex;flex-direction:column;gap:12px;align-items:flex-start;border:2px dashed var(--line)}
+.congrats{font-family:var(--font-display);font-size:1.6rem;color:var(--tension);animation:pop .4s}
+
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--fg);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:.9rem;opacity:0;transition:.25s;z-index:60;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.step.reset{margin-left:4px;border-color:var(--line);color:var(--muted)}
+.step.reset:hover{color:var(--bad);border-color:var(--bad)}
+.confirm{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(440px,calc(100% - 32px));background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);z-index:60;display:flex;flex-direction:column;gap:14px;animation:pop .2s}
+.confirm p{font-weight:500}
+footer{padding-block:24px 40px;text-align:center;font-size:.8rem;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="confetti" aria-hidden="true"></canvas>
+<div class="toast" id="toast" role="status"></div>
+<div class="confirm" id="confirm" hidden role="dialog" aria-labelledby="confirmText">
+  <p id="confirmText">퀴즈 답, 생각 나누기 글, 이름을 모두 지우고 처음부터 시작할까요?</p>
+  <div class="btn-row">
+    <button class="btn btn-primary" id="confirmYes">모두 지우고 초기화</button>
+    <button class="btn" id="confirmNo">취소</button>
+  </div>
+</div>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <div class="brand"><span class="brand-mark"></span>텐세그리티 탐구</div>
+    <nav class="steps" aria-label="학습 단계">
+      <button class="step is-active" data-go="intro"><span class="step-n">1</span>소개</button>
+      <button class="step" data-go="quiz"><span class="step-n">2</span>퀴즈</button>
+      <button class="step" data-go="think"><span class="step-n">3</span>생각 나누기</button>
+      <button class="step is-locked" data-go="cert" id="stepCert"><span class="step-n">4</span>이수증 <span class="lock" id="lockIcon">🔒</span></button>
+      <button class="step reset" id="resetBtn" title="퀴즈 답, 작성 글, 이름을 모두 지우고 처음부터 시작">↺ 초기화</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ========== 1. 소개 ========== -->
+<section id="intro" class="view">
+  <div class="hero">
+    <div class="hero-text">
+      <span class="eyebrow">중학교 수학 체험·탐구 수업</span>
+      <h1>기둥 없이 공중에 <em>뜬다고?</em><br>텐세그리티 탐구</h1>
+      <p class="lead">위쪽 블럭을 떠받치는 기둥이 하나도 없는데, 상판은 공중에 떠 있습니다. 비밀은 <b>팽팽한 줄</b>에 있어요. 모형의 상판 위에 물건을 올려 보며 줄에 생기는 힘을 관찰해 보세요.</p>
+      <div class="btn-row">
+        <button class="btn btn-primary" data-go="quiz">퀴즈 풀러 가기 →</button>
+        <a class="btn" href="#concepts" id="toConcepts">핵심 개념 먼저 보기</a>
+      </div>
+    </div>
+
+    <div class="demo" aria-label="텐세그리티 체험 모형">
+      <svg viewBox="0 0 360 300" role="img" aria-label="두 개의 ㄱ자 블럭이 가운데 줄과 바깥 줄 3개로 연결된 텐세그리티 모형">
+        <defs>
+          <linearGradient id="gPlate" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stop-color="#4f8fd0"/><stop offset="1" stop-color="#1f6fb2"/>
+          </linearGradient>
+        </defs>
+        <!-- 바닥 블럭 (압축) -->
+        <rect x="56" y="250" width="248" height="18" rx="4" fill="url(#gPlate)"/>
+        <rect x="74" y="128" width="16" height="124" rx="3" fill="#1f6fb2"/>
+        <rect x="74" y="122" width="118" height="16" rx="3" fill="#1f6fb2"/>
+        <!-- 윗 블럭 (압축) : 하중에 따라 살짝 내려감 -->
+        <g id="topBlock">
+          <rect x="56" y="38" width="248" height="18" rx="4" fill="url(#gPlate)"/>
+          <rect x="270" y="54" width="16" height="122" rx="3" fill="#1f6fb2"/>
+          <rect x="168" y="162" width="118" height="16" rx="3" fill="#1f6fb2"/>
+          <!-- 물건 -->
+          <g id="weight" opacity="0">
+            <rect id="weightBox" x="150" y="8" width="60" height="30" rx="5" fill="#c89a2b"/>
+            <text id="weightLabel" x="180" y="29" text-anchor="middle" font-size="12" font-weight="700" fill="#1d2740" font-family="Noto Sans KR, sans-serif">100g</text>
+          </g>
+        </g>
+        <!-- 바깥 줄 3개 (장력) -->
+        <line id="sOut3" x1="236" y1="56" x2="236" y2="250" stroke="#e8553a" stroke-width="1.5" opacity=".45" stroke-dasharray="4 3"/>
+        <line id="sOut1" x1="66" y1="56" x2="66" y2="250" stroke="#e8553a" stroke-width="2"/>
+        <line id="sOut2" x1="294" y1="56" x2="294" y2="250" stroke="#e8553a" stroke-width="2"/>
+        <!-- 가운데 줄 (장력) -->
+        <line id="sMid" x1="180" y1="138" x2="180" y2="162" stroke="#e8553a" stroke-width="3" stroke-linecap="round"/>
+        <!-- 레이블 -->
+        <text x="196" y="153" font-size="11" fill="#e8553a" font-weight="700" font-family="Noto Sans KR, sans-serif">가운데 줄</text>
+        <text x="20" y="290" font-size="11" fill="#6b7590" font-family="Noto Sans KR, sans-serif">바깥 줄 3개가 상판을 삼각형 모양으로 붙잡아 수평을 유지</text>
+      </svg>
+      <div class="demo-controls">
+        <label for="load"><span>상판 위에 올린 물건의 무게</span><span id="loadVal">0 g</span></label>
+        <input type="range" id="load" min="0" max="500" step="10" value="0">
+      </div>
+      <div class="readout">
+        <div class="t"><span>가운데 줄 장력</span><b id="tMid">약 150 g중</b></div>
+        <div class="c"><span>블럭이 받는 압축력</span><b id="cBlock">약 150 g중</b></div>
+      </div>
+      <div class="legend"><span>장력(Tension): 줄이 당기는 힘</span><span class="c">압축력(Compression): 막대가 버티는 힘</span></div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <span class="eyebrow">학습 목표</span>
+    <h2>이 수업을 마치면</h2>
+  </div>
+  <div class="grid">
+    <div class="card goal"><span class="goal-n">1</span><p>장력과 압축력의 평형 원리를 이해하고 텐세그리티 구조를 완성할 수 있다.</p></div>
+    <div class="card goal"><span class="goal-n">2</span><p>평면이 결정되는 최소 조건(세 점)과 삼각형의 무게중심 원리를 이해한다.</p></div>
+    <div class="card goal"><span class="goal-n">3</span><p>일상생활 속 현수교와 건축물에 적용된 수학적·구조적 원리를 파악한다.</p></div>
+  </div>
+
+  <div class="section-head" id="concepts">
+    <span class="eyebrow">핵심 개념</span>
+    <h2>텐세그리티란?</h2>
+  </div>
+  <div class="card define">
+    <div class="word">
+      <span class="a">Tense<small>장력 · 팽팽함</small></span>
+      <span>+</span>
+      <span class="b">Integrity<small>구조적 통합</small></span>
+      <span>=</span>
+      <span>Tensegrity<small>텐세그리티</small></span>
+    </div>
+    <p>건축가 버크민스터 풀러가 만든 말로, <b>팽팽하게 당겨진 줄(장력)</b>과 <b>버티는 막대(압축력)</b>가 서로 균형을 이루어 막대끼리 닿지 않고도 안정된 모양을 유지하는 구조를 뜻합니다. 막대는 줄의 바다 위에 떠 있는 섬과 같아요.</p>
+  </div>
+  <div class="grid">
+    <div class="card concept">
+      <span class="tag">수학 · 평면의 결정 조건</span>
+      <svg viewBox="0 0 220 130" aria-label="세 점이 삼각형을 이루어 평면을 결정하는 그림">
+        <polygon points="40,105 180,95 110,25" fill="#dcebfa" stroke="#1f6fb2" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="40" cy="105" r="6" fill="#e8553a"/><circle cx="180" cy="95" r="6" fill="#e8553a"/><circle cx="110" cy="25" r="6" fill="#e8553a"/>
+        <text x="20" y="123" font-size="12" fill="#1d2740" font-family="Noto Sans KR">A</text>
+        <text x="186" y="112" font-size="12" fill="#1d2740" font-family="Noto Sans KR">B</text>
+        <text x="118" y="22" font-size="12" fill="#1d2740" font-family="Noto Sans KR">C</text>
+      </svg>
+      <h3>외곽 줄은 최소 3개</h3>
+      <p>한 직선 위에 있지 않은 <b>세 점</b>이 있으면 평면 하나가 결정됩니다. 카메라 삼각대의 다리가 3개인 이유와 같아요. 상판을 붙잡는 줄이 1개나 2개면 상판은 빙글 돌거나 기울어집니다.</p>
+    </div>
+    <div class="card concept">
+      <span class="tag">수학 · 무게중심과 대칭</span>
+      <svg viewBox="0 0 220 130" aria-label="삼각형의 세 중선이 만나는 무게중심 그림">
+        <polygon points="30,110 190,110 110,20" fill="none" stroke="#1f6fb2" stroke-width="2" stroke-linejoin="round"/>
+        <line x1="30" y1="110" x2="150" y2="65" stroke="#c89a2b" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <line x1="190" y1="110" x2="70" y2="65" stroke="#c89a2b" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <line x1="110" y1="20" x2="110" y2="110" stroke="#c89a2b" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <circle cx="110" cy="80" r="7" fill="#e8553a"/>
+        <text x="122" y="84" font-size="12" fill="#1d2740" font-family="Noto Sans KR">무게중심 G</text>
+      </svg>
+      <h3>힘은 가운데로 모인다</h3>
+      <p>삼각형의 세 중선은 한 점, <b>무게중심</b>에서 만납니다. 줄 3개를 대칭으로 배치하면 상판의 무게가 가운데 줄 쪽으로 고르게 모여 어느 한쪽으로 쏠리지 않아요.</p>
+    </div>
+    <div class="card concept">
+      <span class="tag">과학 · 힘의 평형</span>
+      <svg viewBox="0 0 220 130" aria-label="장력과 압축력이 평형을 이루는 그림">
+        <rect x="95" y="40" width="30" height="60" rx="4" fill="#1f6fb2"/>
+        <line x1="110" y1="10" x2="110" y2="40" stroke="#e8553a" stroke-width="3"/>
+        <line x1="110" y1="100" x2="110" y2="122" stroke="#e8553a" stroke-width="3"/>
+        <path d="M110 12 l-6 8 h12 z" fill="#e8553a"/><path d="M110 120 l-6 -8 h12 z" fill="#e8553a"/>
+        <path d="M60 70 h30 l-7 -6 m7 6 l-7 6" fill="none" stroke="#1f6fb2" stroke-width="2.5"/>
+        <path d="M160 70 h-30 l7 -6 m-7 6 l7 6" fill="none" stroke="#1f6fb2" stroke-width="2.5"/>
+        <text x="8" y="60" font-size="11" fill="#1f6fb2" font-family="Noto Sans KR">압축력</text>
+        <text x="130" y="30" font-size="11" fill="#e8553a" font-family="Noto Sans KR">장력</text>
+      </svg>
+      <h3>당기는 힘 = 버티는 힘</h3>
+      <p>줄은 안쪽으로 <b>당기고</b>, 막대는 바깥쪽으로 <b>버팁니다</b>. 두 힘의 크기가 같아 평형을 이루면 구조물은 움직이지 않고 그 자리에 떠 있게 됩니다.</p>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" data-go="quiz">원리 콕콕! 체험 퀴즈 시작 →</button>
+  </div>
+</section>
+
+<!-- ========== 2. 퀴즈 ========== -->
+<section id="quiz" class="view" hidden>
+  <div class="section-head">
+    <span class="eyebrow">2단계</span>
+    <h2>텐세그리티 원리 콕콕! 체험 퀴즈</h2>
+    <p class="lead">보기를 고르면 바로 정답과 해설이 나옵니다. 5문항을 모두 풀면 이수증 단계가 열려요.</p>
+  </div>
+  <div class="progress"><span id="progText">0 / 5</span><div class="bar"><i id="progBar"></i></div></div>
+  <div class="q-list" id="qList"></div>
+  <div class="card result" id="result" hidden>
+    <span class="eyebrow">퀴즈 결과</span>
+    <div class="score"><span id="scoreNum">0</span><small> / 5 문항 정답</small></div>
+    <p id="scoreMsg"></p>
+    <div class="btn-row">
+      <button class="btn" data-go="think">생각 나누기 →</button>
+      <button class="btn btn-primary" data-go="cert">🎓 이수증 받기</button>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 3. 생각 나누기 ========== -->
+<section id="think" class="view" hidden>
+  <div class="section-head">
+    <span class="eyebrow">3단계</span>
+    <h2>생각 나누기</h2>
+    <p class="lead">정답이 없는 질문이에요. 수업에서 직접 만들고 관찰한 내용을 떠올리며 자유롭게 적어 보세요. 적은 내용은 이 기기에만 저장됩니다.</p>
+  </div>
+  <div class="card prompt">
+    <div class="prompt-q"><span class="mark">Q1</span><p>내가 만든 텐세그리티 블럭 위에 물건을 올렸을 때 실의 장력은 어떻게 변할까?</p></div>
+    <textarea id="think1" placeholder="예) 물건을 올리면 가운데 실이 더 팽팽해지고…"></textarea>
+    <div class="chips" data-for="think1">
+      <button class="chip">가운데 실이 더 팽팽해진다</button>
+      <button class="chip">무게만큼 장력이 커진다</button>
+      <button class="chip">너무 무거우면 실이 끊어질 수 있다</button>
+      <button class="chip">소개 화면의 모형에서 확인했다</button>
+    </div>
+    <div class="saved" id="saved1"></div>
+  </div>
+  <div class="card prompt">
+    <div class="prompt-q"><span class="mark">Q2</span><p>우리 생활 주변에서 텐세그리티 원리를 활용하면 어떤 장점이 있을까?</p></div>
+    <textarea id="think2" placeholder="예) 기둥이 없어서 재료가 적게 들고…"></textarea>
+    <div class="chips" data-for="think2">
+      <button class="chip">기둥이 없어 공간이 넓어진다</button>
+      <button class="chip">가볍고 재료를 아낄 수 있다</button>
+      <button class="chip">줄이 늘어나며 충격을 흡수한다</button>
+      <button class="chip">현수교처럼 멀리 건널 수 있다</button>
+    </div>
+    <div class="saved" id="saved2"></div>
+  </div>
+  <div class="btn-row">
+    <button class="btn" data-go="quiz">← 퀴즈로</button>
+    <button class="btn btn-primary" data-go="cert">🎓 이수증 받기 →</button>
+  </div>
+</section>
+
+<!-- ========== 4. 이수증 ========== -->
+<section id="cert" class="view" hidden>
+  <div class="section-head">
+    <span class="eyebrow">4단계</span>
+    <h2>텐세그리티 탐구 이수증</h2>
+  </div>
+
+  <div class="card locked-msg" id="certLocked">
+    <p>🔒 이수증은 퀴즈 5문항을 모두 푼 뒤에 발급됩니다.</p>
+    <button class="btn btn-primary" data-go="quiz">퀴즈 풀러 가기</button>
+  </div>
+
+  <div class="cert-open" id="certOpen" hidden>
+    <div class="card">
+      <div class="form">
+        <div class="field"><label for="nameIn">학생 이름(닉네임)</label><input id="nameIn" placeholder="예) 김수학" maxlength="20" autocomplete="off"></div>
+        <div class="field"><label>수여 기관 · 날짜</label><p class="fixed">충남 수학교육 한마당 · 2026년 10월 30일</p></div>
+      </div>
+    </div>
+
+    <p class="congrats" id="congrats" hidden>🎉 축하합니다! 텐세그리티 탐구를 모두 마쳤어요.</p>
+
+    <div class="cert-wrap">
+      <div class="cert" id="certCard">
+        <div class="cert-head">
+          <div class="cert-eyebrow">CERTIFICATE OF COMPLETION</div>
+          <div class="cert-title">텐세그리티 탐구 수업 이수증</div>
+          <div class="cert-sub">Tensegrity · 장력과 압축력의 평형을 탐구하다</div>
+        </div>
+        <div class="cert-body">
+          <div class="cert-name" id="certName">○○○</div>
+          <p class="cert-text"><b id="certName2">○○○</b> 학생은 텐세그리티의 과학·수학적 원리를<br>훌륭히 이수하였기에 이 증서를 수여합니다.</p>
+          <div class="cert-items">
+            <span>장력·압축력의 평형</span><span>평면의 결정 조건</span><span>무게중심과 대칭</span><span id="certScore">퀴즈 5문항 중 5문항 정답</span>
+          </div>
+        </div>
+        <div class="cert-foot">
+          <div class="cert-date">2026년 10월 30일</div>
+          <div class="cert-org"><b>충남 수학교육 한마당</b></div>
+        </div>
+        <div class="seal">탐구<br>이수</div>
+      </div>
+    </div>
+
+    <div class="cert-actions">
+      <div class="btn-row">
+        <button class="btn btn-primary" id="issueBtn">🎉 이수증 발급하기</button>
+        <button class="btn btn-blue" id="saveBtn">🖼 이미지로 저장</button>
+      </div>
+      <p class="note" id="saveNote">이름을 입력하고 발급 버튼을 누르면 축하 효과와 함께 이수증이 완성됩니다. 이미지로 저장하면 아래에 그림이 나타나며, 그림을 길게 누르거나 오른쪽 클릭해 저장할 수 있어요.</p>
+      <img class="cert-img" id="certImg" alt="저장된 이수증 이미지" hidden>
+    </div>
+  </div>
+</section>
+
+</main>
+<footer>텐세그리티 수학 체험·탐구 수업 · 중학교 수학 활동지 기반</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+(function(){
+  'use strict';
+  const $ = (s, el=document) => el.querySelector(s);
+  const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+
+  /* ---------- 퀴즈 데이터 ---------- */
+  const QUIZ = [
+    { tag:'단어 퀴즈', q:'텐세그리티(Tensegrity)의 \'텐(Tense)\'은 당기는 힘인 \'이것\'에서 따왔습니다. 실이나 고무줄을 팽팽하게 잡아당길 때 생기는 힘은 무엇일까요?',
+      opts:['장력','마찰력','자기력'], ans:0,
+      why:'실이나 고무줄을 팽팽하게 당길 때 줄 안에 생기는 "당기는 힘"이 장력(Tension)입니다. 마찰력은 맞닿은 두 면 사이에서 움직임을 방해하는 힘이고, 자기력은 자석이 끌어당기거나 밀어내는 힘이에요.' },
+    { tag:'원리 퀴즈', q:'텐세그리티 구조물이 바닥으로 떨어지지 않고 공중에 떠 있을 수 있는 핵심 비밀은 무엇일까요?',
+      opts:['마법의 힘으로 떠 있다.','가운데에 있는 줄이 위에서 단단하게 붙잡고 있다.','아래쪽 블럭에 자석이 숨겨져 있다.'], ans:1,
+      why:'위쪽 블럭은 가운데 줄에 매달려 있어요. 아래쪽 블럭의 팔이 가운데 줄을 통해 위쪽 블럭을 당겨 붙잡고(장력), 블럭은 그 힘을 버티며(압축력) 평형을 이룹니다. 바깥 줄 3개는 상판이 기울지 않게 잡아 줘요.' },
+    { tag:'도형 퀴즈', q:'카메라 삼각대처럼, 텐세그리티 상판이 한쪽으로 쓰러지지 않고 평평한 면(수평)을 유지하려면 주변을 받쳐주는 줄은 최소 몇 개가 필요할까요?',
+      opts:['1개','2개','3개'], ans:2,
+      why:'한 직선 위에 있지 않은 세 점이 있어야 평면 하나가 정해집니다. 줄이 1개면 상판이 빙글 돌고, 2개면 두 줄을 축으로 기울어져요. 삼각대 다리가 3개인 이유와 같습니다.' },
+    { tag:'관찰 퀴즈', ox:true, q:'텐세그리티 구조물은 실로 연결되어 있어서, 손으로 상판을 꾹 누르거나 물건을 올려도 무너지지 않고 버틸 수 있다?',
+      opts:['O','X'], ans:0,
+      why:'맞아요(O). 상판을 누르거나 물건을 올리면 가운데 실이 더 팽팽해지면서 장력이 커지고, 그만큼 블럭이 더 세게 버텨 평형을 유지합니다. 물론 실이 견딜 수 있는 한계를 넘으면 끊어질 수 있어요.' },
+    { tag:'실생활 퀴즈', q:'다음 중 텐세그리티처럼 \'팽팽한 줄(케이블)\'의 당기는 힘을 이용해 만든 대표적인 건축물은 무엇일까요?',
+      opts:['바다를 건너는 거대한 현수교(다리)','벽돌을 차곡차곡 쌓아 올린 굴뚝','네모난 콘크리트 아파트'], ans:0,
+      why:'현수교는 굵은 케이블의 장력으로 상판을 공중에 매달아 긴 거리를 건넙니다. 굴뚝이나 콘크리트 아파트는 재료를 쌓아 압축력으로만 버티는 구조예요.' },
+  ];
+  const marks = ['①','②','③','④'];
+
+  /* ---------- 저장 (이 기기에만) ---------- */
+  const KEY = 'tensegrity-app-v1';
+  let state = { answers: {}, think1: '', think2: '', name: '', issued: false };
+  try { const raw = localStorage.getItem(KEY); if (raw) state = Object.assign(state, JSON.parse(raw)); } catch(e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {} };
+  const quizDone = () => QUIZ.every((q, i) => state.answers[i] !== undefined);
+  const score = () => QUIZ.reduce((a, q, i) => a + (state.answers[i] === q.ans ? 1 : 0), 0);
+
+  /* ---------- 토스트 ---------- */
+  const toastEl = $('#toast'); let toastT;
+  function toast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 2200); }
+
+  /* ---------- 화면 전환 ---------- */
+  const views = ['intro','quiz','think','cert'];
+  function go(id){
+    if (id === 'cert' && !quizDone()) {
+      const b = $('#stepCert'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+      toast('퀴즈 5문항을 모두 풀면 이수증이 열려요 🔒');
+      id = 'quiz';
+    }
+    views.forEach(v => { $('#' + v).hidden = v !== id; });
+    $$('.step').forEach(b => b.classList.toggle('is-active', b.dataset.go === id));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (id === 'cert') renderCert();
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go);
+  });
+  $('#toConcepts').addEventListener('click', e => { e.preventDefault(); $('#concepts').scrollIntoView({ behavior: 'smooth' }); });
+
+  /* ---------- 체험 모형 ---------- */
+  const PLATE = 150; // 상판 블럭 자체 무게(g) 예시값
+  const load = $('#load');
+  function updateDemo(){
+    const w = +load.value, total = PLATE + w;
+    $('#loadVal').textContent = w + ' g';
+    $('#tMid').textContent = '약 ' + total + ' g중';
+    $('#cBlock').textContent = '약 ' + total + ' g중';
+    const dy = Math.min(6, w / 90);
+    $('#topBlock').setAttribute('transform', 'translate(0 ' + dy.toFixed(1) + ')');
+    const sMid = $('#sMid');
+    sMid.setAttribute('stroke-width', (3 + w / 100).toFixed(1));
+    sMid.setAttribute('y2', (162 + dy).toFixed(1));
+    ['#sOut1', '#sOut2', '#sOut3'].forEach(s => $(s).setAttribute('y1', (56 + dy).toFixed(1)));
+    ['#sOut1', '#sOut2'].forEach(s => $(s).setAttribute('stroke-width', (2 + w / 300).toFixed(1)));
+    $('#weight').setAttribute('opacity', w ? 1 : 0);
+    const bw = 40 + w / 8;
+    $('#weightBox').setAttribute('width', bw); $('#weightBox').setAttribute('x', 180 - bw / 2);
+    $('#weightLabel').textContent = w + 'g';
+  }
+  load.addEventListener('input', updateDemo); updateDemo();
+
+  /* ---------- 퀴즈 렌더 ---------- */
+  const qList = $('#qList');
+  QUIZ.forEach((q, i) => {
+    const card = document.createElement('div'); card.className = 'card q'; card.id = 'q' + i;
+    card.innerHTML =
+      '<div class="q-top"><span class="q-num">문제 ' + (i + 1) + '</span><span class="q-tag">' + q.tag + '</span></div>' +
+      '<p class="q-text">' + q.q + '</p>' +
+      '<div class="opts ' + (q.ox ? 'ox' : '') + '">' +
+        q.opts.map((o, k) => '<button class="opt" data-q="' + i + '" data-k="' + k + '"><span class="opt-k">' + marks[k] + '</span><span>' + o + '</span></button>').join('') +
+      '</div><div class="explain-slot"></div>';
+    qList.appendChild(card);
+  });
+  qList.addEventListener('click', e => {
+    const b = e.target.closest('.opt'); if (!b || b.disabled) return;
+    answer(+b.dataset.q, +b.dataset.k, true);
+  });
+  function answer(i, k, fresh){
+    const q = QUIZ[i]; state.answers[i] = k; save();
+    const card = $('#q' + i);
+    $$('.opt', card).forEach(o => {
+      o.disabled = true;
+      const kk = +o.dataset.k;
+      if (kk === q.ans) o.classList.add('is-correct');
+      else if (kk === k) o.classList.add('is-wrong');
+    });
+    const ok = k === q.ans;
+    const label = q.ox ? q.opts[q.ans] : marks[q.ans] + ' ' + q.opts[q.ans];
+    $('.explain-slot', card).innerHTML =
+      '<div class="explain ' + (ok ? 'ok' : 'bad') + '"><span>' + (ok ? '⭕' : '❌') + '</span><div><b>' +
+      (ok ? '정답이에요!' : '아쉬워요. 정답은 ' + label + '입니다.') + '</b>' + q.why + '</div></div>';
+    updateProgress(fresh);
+  }
+  function updateProgress(fresh){
+    const n = Object.keys(state.answers).length;
+    $('#progText').textContent = n + ' / 5';
+    $('#progBar').style.width = (n / 5 * 100) + '%';
+    const done = quizDone();
+    $('#stepCert').classList.toggle('is-locked', !done);
+    $('#lockIcon').textContent = done ? '✓' : '🔒';
+    $$('.step').forEach(s => { if (s.dataset.go === 'quiz') s.classList.toggle('is-done', done); });
+    const res = $('#result'); res.hidden = !done;
+    if (!done) return;
+    const sc = score();
+    $('#scoreNum').textContent = sc;
+    $('#scoreMsg').textContent = sc === 5 ? '완벽해요! 장력과 압축력, 평면의 결정 조건까지 모두 이해했어요.' :
+      sc >= 3 ? '잘했어요! 틀린 문제의 해설을 한 번 더 읽어 보면 더 좋아요.' :
+      '해설을 읽고 소개 화면의 모형을 다시 살펴보세요. 이수증은 그래도 받을 수 있어요!';
+    if (fresh) { toast('5문항 완료! 이수증 단계가 열렸어요 🎓'); res.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  }
+  Object.keys(state.answers).forEach(i => answer(+i, state.answers[i], false));
+  updateProgress(false);
+
+  /* ---------- 생각 나누기 ---------- */
+  [1, 2].forEach(n => {
+    const ta = $('#think' + n), savedEl = $('#saved' + n);
+    ta.value = state['think' + n] || '';
+    if (ta.value) savedEl.textContent = '저장됨 ✓';
+    let t;
+    ta.addEventListener('input', () => {
+      state['think' + n] = ta.value; save();
+      savedEl.textContent = '저장 중…'; clearTimeout(t); t = setTimeout(() => savedEl.textContent = '저장됨 ✓', 500);
+    });
+  });
+  $$('.chips').forEach(ch => ch.addEventListener('click', e => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    const ta = $('#' + ch.dataset.for);
+    ta.value = (ta.value.trim() ? ta.value.replace(/\s+$/, '') + '\n' : '') + c.textContent;
+    ta.dispatchEvent(new Event('input')); ta.focus();
+  }));
+
+  /* ---------- 이수증 ---------- */
+  const nameIn = $('#nameIn');
+  nameIn.value = state.name || '';
+  function renderCert(){
+    const done = quizDone();
+    $('#certLocked').hidden = done; $('#certOpen').hidden = !done;
+    if (!done) return;
+    const name = nameIn.value.trim() || '○○○';
+    $('#certName').textContent = name; $('#certName2').textContent = name;
+    $('#certScore').textContent = '퀴즈 5문항 중 ' + score() + '문항 정답';
+    $('#congrats').hidden = !state.issued;
+  }
+  nameIn.addEventListener('input', () => { state.name = nameIn.value; save(); renderCert(); });
+  $('#issueBtn').addEventListener('click', () => {
+    if (!nameIn.value.trim()) { nameIn.focus(); toast('이수증에 넣을 이름을 먼저 입력해 주세요'); return; }
+    state.issued = true; save(); renderCert();
+    $('#certCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    confetti();
+    toast('🎉 이수증이 발급되었습니다!');
+  });
+  $('#saveBtn').addEventListener('click', async () => {
+    if (!nameIn.value.trim()) { nameIn.focus(); toast('이름을 먼저 입력해 주세요'); return; }
+    if (typeof html2canvas !== 'function') { toast('이미지 저장 기능을 불러오지 못했어요. 화면을 캡처해 주세요.'); return; }
+    const btn = $('#saveBtn'); btn.disabled = true; btn.textContent = '만드는 중…';
+    try {
+      const canvas = await html2canvas($('#certCard'), { scale: 2, backgroundColor: '#fffdf6', useCORS: true });
+      const url = canvas.toDataURL('image/png');
+      const img = $('#certImg'); img.src = url; img.hidden = false;
+      $('#saveNote').textContent = '이수증 이미지가 아래에 만들어졌어요. 그림을 길게 누르거나(모바일) 오른쪽 클릭(PC)해서 저장하세요.';
+      try {
+        const a = document.createElement('a'); a.href = url; a.download = '텐세그리티_이수증_' + nameIn.value.trim() + '.png';
+        document.body.appendChild(a); a.click(); a.remove();
+      } catch(e) {}
+      img.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch(e) { toast('이미지를 만들지 못했어요. 화면을 캡처해 주세요.'); }
+    btn.disabled = false; btn.textContent = '🖼 이미지로 저장';
+  });
+
+  /* ---------- 축하 효과 ---------- */
+  const cv = $('#confetti'), ctx = cv.getContext('2d');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function confetti(){
+    if (reduce) return;
+    const W = cv.width = innerWidth, H = cv.height = innerHeight;
+    const colors = ['#e8553a', '#1f6fb2', '#c89a2b', '#1b8f5a', '#ff9f7a', '#5aa2e6'];
+    const ps = Array.from({ length: 160 }, () => ({
+      x: Math.random() * W, y: -20 - Math.random() * H * 0.5, w: 6 + Math.random() * 6, h: 8 + Math.random() * 8,
+      vx: (Math.random() - .5) * 2, vy: 2 + Math.random() * 3, r: Math.random() * Math.PI, vr: (Math.random() - .5) * .2,
+      c: colors[Math.floor(Math.random() * colors.length)]
+    }));
+    const t0 = performance.now();
+    (function frame(t){
+      const el = t - t0; ctx.clearRect(0, 0, W, H);
+      let alive = false;
+      ps.forEach(p => {
+        p.x += p.vx + Math.sin(el / 300 + p.r) * 0.6; p.y += p.vy; p.r += p.vr;
+        if (p.y < H + 20) alive = true;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore();
+      });
+      if (alive && el < 6000) requestAnimationFrame(frame); else ctx.clearRect(0, 0, W, H);
+    })(t0);
+  }
+
+  /* ---------- 초기화 ---------- */
+  const confirmBox = $('#confirm');
+  $('#resetBtn').addEventListener('click', () => { confirmBox.hidden = false; $('#confirmNo').focus(); });
+  $('#confirmNo').addEventListener('click', () => { confirmBox.hidden = true; });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') confirmBox.hidden = true; });
+  $('#confirmYes').addEventListener('click', () => {
+    try { localStorage.removeItem(KEY); } catch(e) {}
+    confirmBox.hidden = true;
+    location.reload();
+  });
+
+  go('intro');
+})();
+</script>
+</body>
+</html>
