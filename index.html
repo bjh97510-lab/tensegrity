@@ -116,6 +116,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{
 .concept p{font-size:.93rem;color:var(--muted)}
 .concept p b{color:var(--fg)}
 .concept .icon{font-size:1.9rem;line-height:1}
+.links{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
+.links a{display:inline-flex;align-items:center;gap:4px;font-size:.8rem;font-weight:700;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface-2);color:var(--comp);text-decoration:none;transition:border-color .15s,background .15s}
+.links a:hover{border-color:var(--comp);background:var(--comp-soft)}
 .callout{display:flex;flex-direction:column;gap:10px;border-left:6px solid var(--tension)}
 .callout .big{font-size:1.2rem;font-weight:500;line-height:1.6}
 .callout .t{color:var(--tension)} .callout .c{color:var(--comp)}
@@ -340,22 +343,26 @@ footer{padding-block:24px 40px;text-align:center;font-size:.8rem;color:var(--mut
   <div class="section-head">
     <span class="eyebrow">쉽게 말하면</span>
     <h2>주변에서 찾은 세 가지 비유</h2>
+    <p class="lead">카드 아래 단추를 누르면 실제 사진과 자료가 새 탭에서 열려요.</p>
   </div>
   <div class="grid">
     <div class="card concept">
       <span class="icon">🪢</span>
       <h3>줄다리기</h3>
       <p>양쪽에서 <b>똑같은 힘</b>으로 당기면 줄 가운데 묶은 손수건은 꼼짝하지 않아요. 텐세그리티의 막대도 여러 줄이 사방에서 똑같이 당겨 주기 때문에 제자리에 멈춰 있습니다.</p>
+      <div class="links"><a href="https://commons.wikimedia.org/wiki/Category:Tug_of_war" target="_blank" rel="noopener">📷 사진 보기</a><a href="https://ko.wikipedia.org/wiki/%EC%A4%84%EB%8B%A4%EB%A6%AC%EA%B8%B0" target="_blank" rel="noopener">📖 자료 읽기</a></div>
     </div>
     <div class="card concept">
       <span class="icon">⛺</span>
       <h3>텐트</h3>
       <p>텐트 기둥은 혼자서는 서 있지 못해요. 그런데 줄을 땅에 <b>팽팽하게</b> 묶어 주면 바람이 불어도 넘어지지 않죠. 버티는 기둥(압축력)과 당기는 줄(장력)이 한 팀이 된 거예요.</p>
+      <div class="links"><a href="https://ko.wikipedia.org/wiki/%ED%85%90%ED%8A%B8" target="_blank" rel="noopener">📷 사진 보기</a><a href="https://en.wikipedia.org/wiki/Guy-wire" target="_blank" rel="noopener">📖 버팀줄 자료(영문)</a></div>
     </div>
     <div class="card concept">
       <span class="icon">🚲</span>
       <h3>자전거 바퀴</h3>
       <p>가느다란 바큇살이 사람 무게를 견디는 이유는 바큇살이 눌리는 게 아니라 <b>당겨지고</b> 있기 때문이에요. 수십 개의 바큇살이 테를 사방에서 팽팽히 당겨서 가볍고도 튼튼합니다.</p>
+      <div class="links"><a href="https://ko.wikipedia.org/wiki/%EB%B0%94%ED%80%B4%EC%82%B4" target="_blank" rel="noopener">📷 사진 보기</a><a href="https://en.wikipedia.org/wiki/Wire_wheel" target="_blank" rel="noopener">📖 바퀴 원리 자료(영문)</a></div>
     </div>
   </div>
 
@@ -418,27 +425,32 @@ footer{padding-block:24px 40px;text-align:center;font-size:.8rem;color:var(--mut
   <div class="section-head">
     <span class="eyebrow">실생활 속 텐세그리티</span>
     <h2>어디에서 볼 수 있을까?</h2>
+    <p class="lead">카드 아래 단추를 누르면 실제 건축물 사진과 증거 자료를 볼 수 있어요.</p>
   </div>
   <div class="grid">
     <div class="card concept">
       <span class="icon">🗼</span>
       <h3>니들 타워 (미국 워싱턴 D.C.)</h3>
       <p>케네스 스넬슨이 만든 약 18m 높이의 조각이에요. 알루미늄 막대들이 <b>서로 하나도 닿지 않고</b> 강철 줄로만 연결돼 있어서, 멀리서 보면 막대들이 공중에 떠 있는 것처럼 보입니다.</p>
+      <div class="links"><a href="https://en.wikipedia.org/wiki/Needle_Tower" target="_blank" rel="noopener">📷 사진 보기</a><a href="https://en.wikipedia.org/wiki/Kenneth_Snelson" target="_blank" rel="noopener">📖 스넬슨 자료(영문)</a></div>
     </div>
     <div class="card concept">
       <span class="icon">🌉</span>
       <h3>쿠릴파 다리 (호주 브리즈번)</h3>
       <p>2009년에 문을 연 보행자 다리로, 세계에서 가장 큰 텐세그리티 다리로 불려요. 기울어진 기둥들을 수많은 강철 케이블이 당겨서 <b>가볍고 넓은 다리</b>를 만들었습니다.</p>
+      <div class="links"><a href="https://commons.wikimedia.org/wiki/Category:Kurilpa_Bridge" target="_blank" rel="noopener">📷 사진 보기</a><a href="https://en.wikipedia.org/wiki/Kurilpa_Bridge" target="_blank" rel="noopener">📖 자료 읽기(영문)</a></div>
     </div>
     <div class="card concept">
       <span class="icon">🌁</span>
       <h3>현수교</h3>
       <p>바다를 건너는 긴 다리는 굵은 케이블의 <b>장력</b>으로 상판을 매달아요. 벽돌을 쌓는 방식으로는 만들 수 없는 긴 거리를, 당기는 힘을 이용해 건너는 거죠.</p>
+      <div class="links"><a href="https://ko.wikipedia.org/wiki/%EC%9D%B4%EC%88%9C%EC%8B%A0%EB%8C%80%EA%B5%90" target="_blank" rel="noopener">📷 이순신대교 사진</a><a href="https://ko.wikipedia.org/wiki/%ED%98%84%EC%88%98%EA%B5%90" target="_blank" rel="noopener">📖 현수교 자료</a></div>
     </div>
     <div class="card concept">
       <span class="icon">🦴</span>
       <h3>우리 몸</h3>
       <p>뼈(압축)는 서로 직접 붙어 있지 않아요. 근육과 인대, 힘줄(장력)이 뼈를 잡아당겨 몸의 모양을 지킵니다. 세포 속 뼈대(세포 골격)도 같은 방식으로 모양을 유지한다고 과학자들은 설명해요.</p>
+      <div class="links"><a href="https://en.wikipedia.org/wiki/Tensegrity#Biology" target="_blank" rel="noopener">📖 몸속 텐세그리티(영문)</a><a href="https://www.scientificamerican.com/article/the-architecture-of-life/" target="_blank" rel="noopener">📰 과학 기사(영문)</a></div>
     </div>
   </div>
 
