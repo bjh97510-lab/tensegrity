@@ -115,6 +115,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{
 .concept svg{width:100%;height:auto;max-width:100%}
 .concept p{font-size:.93rem;color:var(--muted)}
 .concept p b{color:var(--fg)}
+.concept .icon{font-size:1.9rem;line-height:1}
+.callout{display:flex;flex-direction:column;gap:10px;border-left:6px solid var(--tension)}
+.callout .big{font-size:1.2rem;font-weight:500;line-height:1.6}
+.callout .t{color:var(--tension)} .callout .c{color:var(--comp)}
+.rules,.summary{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
+.rules li::marker{font-family:var(--font-display);color:var(--comp)}
+.summary li::marker{color:var(--tension)}
 
 /* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 22px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:700;text-decoration:none;color:inherit;transition:transform .12s,box-shadow .12s}
@@ -312,6 +319,7 @@ footer{padding-block:24px 40px;text-align:center;font-size:.8rem;color:var(--mut
   <div class="section-head" id="concepts">
     <span class="eyebrow">핵심 개념</span>
     <h2>텐세그리티란?</h2>
+    <p class="lead">'텐세그리티'는 이름부터 뜻을 담고 있어요. 두 낱말을 합친 말이거든요.</p>
   </div>
   <div class="card define">
     <div class="word">
@@ -321,7 +329,48 @@ footer{padding-block:24px 40px;text-align:center;font-size:.8rem;color:var(--mut
       <span>=</span>
       <span>Tensegrity<small>텐세그리티</small></span>
     </div>
-    <p>건축가 버크민스터 풀러가 만든 말로, <b>팽팽하게 당겨진 줄(장력)</b>과 <b>버티는 막대(압축력)</b>가 서로 균형을 이루어 막대끼리 닿지 않고도 안정된 모양을 유지하는 구조를 뜻합니다. 막대는 줄의 바다 위에 떠 있는 섬과 같아요.</p>
+    <p>1960년대 미국의 건축가 <b>버크민스터 풀러</b>가 'tensional(장력의)'과 'integrity(하나로 온전함)'를 합쳐 만든 말입니다. 조각가 <b>케네스 스넬슨</b>은 이 원리로 조각을 만들고 '떠 있는 압축(floating compression)'이라고 불렀어요. 딱딱한 <b>막대는 서로 닿지 않고</b>, 팽팽한 <b>줄의 그물</b>이 막대들을 붙잡아 모양을 지킵니다. 그래서 막대가 줄 위에 둥둥 떠 있는 것처럼 보여요.</p>
+  </div>
+
+  <div class="card callout">
+    <span class="eyebrow">한 문장으로</span>
+    <p class="big">막대는 <b class="c">밀고</b>, 줄은 <b class="t">당겨요</b>. 미는 힘과 당기는 힘이 <b>똑같아지는 순간</b>, 모든 것이 제자리에 멈춰 서요.</p>
+  </div>
+
+  <div class="section-head">
+    <span class="eyebrow">쉽게 말하면</span>
+    <h2>주변에서 찾은 세 가지 비유</h2>
+  </div>
+  <div class="grid">
+    <div class="card concept">
+      <span class="icon">🪢</span>
+      <h3>줄다리기</h3>
+      <p>양쪽에서 <b>똑같은 힘</b>으로 당기면 줄 가운데 묶은 손수건은 꼼짝하지 않아요. 텐세그리티의 막대도 여러 줄이 사방에서 똑같이 당겨 주기 때문에 제자리에 멈춰 있습니다.</p>
+    </div>
+    <div class="card concept">
+      <span class="icon">⛺</span>
+      <h3>텐트</h3>
+      <p>텐트 기둥은 혼자서는 서 있지 못해요. 그런데 줄을 땅에 <b>팽팽하게</b> 묶어 주면 바람이 불어도 넘어지지 않죠. 버티는 기둥(압축력)과 당기는 줄(장력)이 한 팀이 된 거예요.</p>
+    </div>
+    <div class="card concept">
+      <span class="icon">🚲</span>
+      <h3>자전거 바퀴</h3>
+      <p>가느다란 바큇살이 사람 무게를 견디는 이유는 바큇살이 눌리는 게 아니라 <b>당겨지고</b> 있기 때문이에요. 수십 개의 바큇살이 테를 사방에서 팽팽히 당겨서 가볍고도 튼튼합니다.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="eyebrow">텐세그리티가 되려면</span>
+    <ol class="rules">
+      <li><b>막대끼리 서로 닿지 않아요.</b> 막대는 줄에만 연결돼요.</li>
+      <li><b>줄은 끊기지 않고 이어진 그물을 이뤄요.</b> 어느 줄 하나만 느슨해져도 모양이 무너져요.</li>
+      <li><b>처음부터 줄을 팽팽하게 당겨 놓아요.</b> 미리 당겨 둔 힘 덕분에 물건을 올려도 바로 균형을 되찾습니다.</li>
+    </ol>
+  </div>
+
+  <div class="section-head">
+    <span class="eyebrow">수학 · 과학 원리</span>
+    <h2>왜 쓰러지지 않을까?</h2>
   </div>
   <div class="grid">
     <div class="card concept">
@@ -362,8 +411,45 @@ footer{padding-block:24px 40px;text-align:center;font-size:.8rem;color:var(--mut
         <text x="130" y="30" font-size="11" fill="#e8553a" font-family="Noto Sans KR">장력</text>
       </svg>
       <h3>당기는 힘 = 버티는 힘</h3>
-      <p>줄은 안쪽으로 <b>당기고</b>, 막대는 바깥쪽으로 <b>버팁니다</b>. 두 힘의 크기가 같아 평형을 이루면 구조물은 움직이지 않고 그 자리에 떠 있게 됩니다.</p>
+      <p>줄은 안쪽으로 <b>당기고</b>, 막대는 바깥쪽으로 <b>버팁니다</b>. 줄다리기에서 양쪽 힘이 같으면 아무도 안 끌려가듯, 두 힘의 크기가 같아지면(힘의 평형) 구조물은 움직이지 않고 그 자리에 떠 있어요.</p>
     </div>
+  </div>
+
+  <div class="section-head">
+    <span class="eyebrow">실생활 속 텐세그리티</span>
+    <h2>어디에서 볼 수 있을까?</h2>
+  </div>
+  <div class="grid">
+    <div class="card concept">
+      <span class="icon">🗼</span>
+      <h3>니들 타워 (미국 워싱턴 D.C.)</h3>
+      <p>케네스 스넬슨이 만든 약 18m 높이의 조각이에요. 알루미늄 막대들이 <b>서로 하나도 닿지 않고</b> 강철 줄로만 연결돼 있어서, 멀리서 보면 막대들이 공중에 떠 있는 것처럼 보입니다.</p>
+    </div>
+    <div class="card concept">
+      <span class="icon">🌉</span>
+      <h3>쿠릴파 다리 (호주 브리즈번)</h3>
+      <p>2009년에 문을 연 보행자 다리로, 세계에서 가장 큰 텐세그리티 다리로 불려요. 기울어진 기둥들을 수많은 강철 케이블이 당겨서 <b>가볍고 넓은 다리</b>를 만들었습니다.</p>
+    </div>
+    <div class="card concept">
+      <span class="icon">🌁</span>
+      <h3>현수교</h3>
+      <p>바다를 건너는 긴 다리는 굵은 케이블의 <b>장력</b>으로 상판을 매달아요. 벽돌을 쌓는 방식으로는 만들 수 없는 긴 거리를, 당기는 힘을 이용해 건너는 거죠.</p>
+    </div>
+    <div class="card concept">
+      <span class="icon">🦴</span>
+      <h3>우리 몸</h3>
+      <p>뼈(압축)는 서로 직접 붙어 있지 않아요. 근육과 인대, 힘줄(장력)이 뼈를 잡아당겨 몸의 모양을 지킵니다. 세포 속 뼈대(세포 골격)도 같은 방식으로 모양을 유지한다고 과학자들은 설명해요.</p>
+    </div>
+  </div>
+
+  <div class="card callout">
+    <span class="eyebrow">한눈에 정리</span>
+    <ul class="summary">
+      <li><b class="t">장력</b>은 줄이 당기는 힘, <b class="c">압축력</b>은 막대가 버티는 힘이에요.</li>
+      <li>두 힘이 같아지면(평형) 막대는 줄에 매달려 공중에 멈춰요.</li>
+      <li>상판을 수평으로 잡으려면 줄이 <b>최소 3개</b> 필요해요. 세 점이 평면을 정하니까요.</li>
+      <li>줄 3개를 <b>대칭</b>으로 두면 무게가 무게중심으로 모여 어느 쪽으로도 기울지 않아요.</li>
+    </ul>
   </div>
 
   <div class="btn-row">
